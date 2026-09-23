@@ -1,6 +1,8 @@
 from typing import List, Optional, Tuple, Dict
 from datetime import datetime, timedelta
 
+from pandas.core.config_init import reader_engine_doc
+
 
 class BookNotFoundException(Exception):
     """Книга не найдена"""
@@ -92,41 +94,86 @@ class Reader:
         self.__card_number = card_number
         self.__borrowed_books: List[Book] = []
 
-        @property
-        def name(self) -> str:
-            return self.__name
+    @property
+    def name(self) -> str:
+        return self.__name
 
-        @property
-        def card_number(self) -> str:
-            return self.__card_number
+    @property
+    def card_number(self) -> str:
+        return self.__card_number
 
-        @property
-        def borrowed_books(self) -> List[Book]:
-            """Возвращает копию списка для защиты инкапсуляции"""
-            return self.__borrowed_books.copy()
+    @property
+    def borrowed_books(self) -> List[Book]:
+        """Возвращает копию списка для защиты инкапсуляции"""
+        return self.__borrowed_books.copy()
 
-        @property
-        def borrowed_count(self) -> int:
-            return len(self.__borrowed_books)
+    @property
+    def borrowed_count(self) -> int:
+        return len(self.__borrowed_books)
 
-        def borrow_book(self, book: Book) -> None:
-            """Взять книгу."""
-            if len(self.__borrowed_books) >= Reader.MAX_BOOKS:
-                raise BookLimitExceededException(f'{self.__name} Вы достигли предела в'
-                                                 f'{Reader.MAX_BOOKS} книги')
-            book.borrow()
-            self.__borrowed_books.append(book)
+    def borrow_book(self, book: Book) -> None:
+        """Взять книгу."""
+        if len(self.__borrowed_books) >= Reader.MAX_BOOKS:
+            raise BookLimitExceededException(f'{self.__name} Вы достигли предела в'
+                                             f'{Reader.MAX_BOOKS} книги')
+        book.borrow()
+        self.__borrowed_books.append(book)
 
-        def return_books(self, book: Book) -> None:
-            """Возврат книги."""
-            if book in self.__borrowed_books:
-                book.return_book()
-                self.__borrowed_books.remove(book)
+    def return_books(self, book: Book) -> None:
+        """Возврат книги."""
+        if book in self.__borrowed_books:
+            book.return_book()
+            self.__borrowed_books.remove(book)
 
-        def __str__(self):
-            book_count = len(self.__borrowed_books)
-            return (f'Читатель: {self.__name}, №{self.__card_number}, '
-                    f'Книг на руках: {book_count}')
+    def __str__(self):
+        book_count = len(self.__borrowed_books)
+        return (f'Читатель: {self.__name}, №{self.__card_number}, '
+                f'Книг на руках: {book_count}')
 
-        def __repr__(self):
-            return f'Читатель: (имя = {self.__name}, Читательский билет № {self.__card_number}) '
+    def __repr__(self):
+        return f'Читатель: (имя = {self.__name}, Читательский билет № {self.__card_number}) '
+
+
+class Library:
+    """Класс, представляющий библиотеку."""
+    def __init__(self, name: str):
+        self.__name = name
+        self.__readers: Dict[str, Reader] = {}  # card_number: Reader
+        self.__books: Dict[str, Book] = {}  # ISBN: Book
+
+    @property
+    def name(self) -> str:
+        return self.__name
+
+    def add_book(self, book: Book) -> None:
+        """Добавить книгу в библиотеку."""
+        if not isinstance(book, Book):
+            raise TypeError('Добавить можно только объект класса Book')
+        self.__books[book.isbn] = book
+
+    def remove_book (self, isbn: str) -> None:
+        """Удалить книгу из библиотеки."""
+        if not isbn in self.__books:
+            raise BookNotFoundException(f'Книга с ISBN {isbn} не найдена')
+
+        book = self.__books[isbn]
+        if book.is_borrowed_by:
+            raise BookAlreadyBorrowedException(f'Книга {book.title} выдана читателю')
+
+        del self.__books[isbn]
+
+    def register_reader(self, reader: Reader) -> None:
+        """Регистрация нового читателя."""
+        if not isinstance(reader, Reader):
+            raise TypeError('Добавить можно только объект класса Reader')
+        self.__readers[reader.card_number] = reader
+
+    def unregister_reader(self, card_number: str) -> None:
+        """ Удалить читателя из библиотеки."""
+        if not card_number in self.__readers:
+            raise ReaderNotFoundException(f'Читатель с номером  {card_number} отсутствует')
+        reader = self.__readers[card_number]
+
+        if reader.borrowed_count > 0:
+            raise Exception(f'Запрет. У читателя {reader.name} не сданы книги.')
+        del self.__readers[card_number]
