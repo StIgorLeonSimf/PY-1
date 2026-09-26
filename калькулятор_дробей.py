@@ -38,8 +38,8 @@ def mult(n1,d1, n2, d2):
 
 
 def div(n1,d1, n2, d2):
-    # if d1 == 0 or d2 == 0:
-    #     raise ZeroDivisionError('division by zero')
+    if d1 == 0 or d2 == 0:
+        raise ZeroDivisionError('division by zero')
     n = n1 * d2
     d = d1 * n2
     return n, d
